@@ -6,6 +6,7 @@ const helmet       = require('helmet');
 const cors         = require('cors');
 const rateLimit    = require('express-rate-limit');
 const path         = require('path');
+const fs           = require('fs');
 const db           = require('./config/db');
 
 const app  = express();
@@ -53,8 +54,20 @@ app.use(session({
   }
 }));
 
+// ── Serve HTML with Env Variables ─────────────────────────
+const serveIndex = (req, res) => {
+  fs.readFile(path.join(__dirname, 'index.html'), 'utf8', (err, html) => {
+    if (err) return res.status(500).send('Error loading application.');
+    const clientId = (process.env.PAYPAL_CLIENT_ID || 'test').trim();
+    res.send(html.replace('{{PAYPAL_CLIENT_ID}}', clientId));
+  });
+};
+
+app.get('/', serveIndex);
+app.get('/index.html', serveIndex);
+
 // ── Static Files ──────────────────────────────────────────
-app.use(express.static(__dirname));
+app.use(express.static(__dirname, { index: false }));
 
 // ── API Routes ────────────────────────────────────────────
 app.use('/api/auth',     require('./routes/auth'));
@@ -65,9 +78,7 @@ app.use('/api/admin',    require('./routes/admin'));
 
 // ── SPA Fallback ──────────────────────────────────────────
 // All non-API routes serve index.html (client-side routing)
-app.get(/.*/, (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+app.get(/.*/, serveIndex);
 
 // ── Global Error Handler ──────────────────────────────────
 app.use((err, req, res, next) => {

@@ -50,6 +50,7 @@ CREATE TABLE orders (
   shipping_email VARCHAR(100),
   shipping_address VARCHAR(255),
   shipping_city VARCHAR(100),
+  shipping_state VARCHAR(100),
   shipping_zip VARCHAR(20),
   shipping_country VARCHAR(50),
   paypal_order_id VARCHAR(100),

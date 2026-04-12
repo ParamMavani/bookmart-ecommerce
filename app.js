@@ -12,7 +12,7 @@ const state = {
   wishlist:    JSON.parse(localStorage.getItem('bm_wishlist') || '[]'),
   currentPage: 'home',
   filters:     { category: '', search: '', sort: 'rating', page: 1, maxPrice: 50 },
-  checkout:    { shipping: null },
+  checkout:    { shipping: null, total: 0 },
 };
 
 // ── API Helper ─────────────────────────────────────────────
@@ -556,6 +556,7 @@ async function renderCheckout() {
   const { items, subtotal } = data;
   const tax = +(subtotal * 0.08).toFixed(2);
   const total = +(subtotal + tax).toFixed(2);
+  state.checkout.total = total;
 
   document.getElementById('appRoot').innerHTML = `
     <div class="checkout-wrap">
@@ -673,20 +674,28 @@ function mountPayPal() {
 
   paypal.Buttons({
     style: { layout:'vertical', color:'gold', shape:'rect', label:'pay', height:48 },
-    createOrder: async () => {
-      const { ok, data } = await api('POST', '/api/orders/create-paypal-order');
-      if (!ok) { showToast(data.message||'Order creation failed.', 'error'); throw new Error(); }
-      return data.orderID;
+    createOrder: (data, actions) => {
+      return actions.order.create({
+        purchase_units: [{ amount: { currency_code: 'USD', value: state.checkout.total.toString() } }]
+      });
     },
-    onApprove: async (ppData) => {
-      wrap.innerHTML = '<div class="paypal-processing"><div class="spinner"></div><p>Processing…</p></div>';
-      const { ok, data } = await api('POST', '/api/orders/capture-paypal-order',
-        { orderID: ppData.orderID, shipping: state.checkout.shipping });
-      if (ok) {
-        state.cartCount = 0; updateCartBadge();
-        navigate('success', { orderId: data.orderId });
-      } else {
-        showToast(data.message||'Capture failed.', 'error'); mountPayPal();
+    onApprove: async (data, actions) => {
+      try {
+        wrap.innerHTML = '<div class="paypal-processing"><div class="spinner"></div><p>Authorizing Payment…</p></div>';
+        const captureResult = await actions.order.capture();
+        
+        const res = await api('POST', '/api/orders/capture-paypal-order',
+          { orderID: captureResult.id, shipping: state.checkout.shipping });
+          
+        if (res.ok) {
+          state.cartCount = 0; updateCartBadge();
+          navigate('success', { orderId: res.data.orderId });
+        } else {
+          showToast(res.data.message||'Capture failed.', 'error'); mountPayPal();
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Payment declined by PayPal.', 'error'); mountPayPal();
       }
     },
     onError:  (e) => { console.error(e); showToast('PayPal error. Try again.', 'error'); },

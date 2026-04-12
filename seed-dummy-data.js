@@ -38,9 +38,9 @@ async function seedAll() {
     console.log('✅ Cart items seeded');
 
     // 5. Seed Orders (Jane has a paid order, John has a pending one)
-    await db.query(`INSERT IGNORE INTO orders (id, user_id, subtotal, tax, total, status, shipping_name, shipping_email, shipping_address, shipping_city, shipping_zip, shipping_country) VALUES 
-      (1, 3, 39.99, 3.20, 43.19, 'paid', 'Jane Smith', 'jane@example.com', '123 Tech Lane', 'San Francisco', '10001', 'US'),
-      (2, 2, 45.00, 3.60, 48.60, 'pending', 'John Doe', 'john@example.com', '456 Fiction Blvd', 'Seattle', '94105', 'US')`);
+    await db.query(`INSERT IGNORE INTO orders (id, user_id, subtotal, tax, total, status, shipping_name, shipping_email, shipping_address, shipping_city, shipping_state, shipping_zip, shipping_country) VALUES 
+      (1, 3, 39.99, 3.20, 43.19, 'paid', 'Jane Smith', 'jane@example.com', '123 Tech Lane', 'San Francisco', 'CA', '10001', 'US'),
+      (2, 2, 45.00, 3.60, 48.60, 'pending', 'John Doe', 'john@example.com', '456 Fiction Blvd', 'Seattle', 'WA', '94105', 'US')`);
     
     // 6. Seed Order Items
     await db.query(`INSERT IGNORE INTO order_items (id, order_id, product_id, quantity, price) VALUES 

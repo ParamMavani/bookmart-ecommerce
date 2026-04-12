@@ -32,9 +32,9 @@ router.post('/capture-paypal-order', async (req, res) => {
     const total = subtotal + tax;
 
     const [orderResult] = await db.query(`
-      INSERT INTO orders (user_id, subtotal, tax, total, status, shipping_name, shipping_email, shipping_address, shipping_city, shipping_zip, shipping_country, paypal_order_id)
-      VALUES (?, ?, ?, ?, 'paid', ?, ?, ?, ?, ?, ?, ?)`,
-      [userId, subtotal, tax, total, shipping.name, shipping.email, shipping.address, shipping.city, shipping.zip, shipping.country, orderID]);
+      INSERT INTO orders (user_id, subtotal, tax, total, status, shipping_name, shipping_email, shipping_address, shipping_city, shipping_state, shipping_zip, shipping_country, paypal_order_id)
+      VALUES (?, ?, ?, ?, 'paid', ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, subtotal, tax, total, shipping.name, shipping.email, shipping.address, shipping.city, shipping.state, shipping.zip, shipping.country, orderID]);
     
     const newOrderId = orderResult.insertId;
 
