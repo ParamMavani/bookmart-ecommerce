@@ -597,12 +597,42 @@ async function renderCheckout() {
 
         <div class="checkout-card" id="paymentSection" style="display:none">
           <h3 class="checkout-card-title">💳 Payment</h3>
-          <div class="paypal-info">
-            <p>Complete your purchase securely via PayPal.</p>
-            <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_111x69.jpg"
-              alt="PayPal" style="height:36px;border-radius:4px;margin-top:.5rem" />
+          
+          <div class="payment-method-selector" style="margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            <label style="padding: .8rem; border: 1px solid var(--border, #ddd); border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: .5rem;">
+              <input type="radio" name="payMethod" value="paypal" checked onchange="switchPayMethod('paypal')">
+              <strong>PayPal / Credit Card</strong>
+            </label>
+            <label style="padding: .8rem; border: 1px solid var(--border, #ddd); border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: .5rem;">
+              <input type="radio" name="payMethod" value="upi" onchange="switchPayMethod('upi')">
+              <strong>UPI (GPay, Paytm, PhonePe)</strong>
+            </label>
+            <label style="padding: .8rem; border: 1px solid var(--border, #ddd); border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: .5rem;">
+              <input type="radio" name="payMethod" value="cod" onchange="switchPayMethod('cod')">
+              <strong>Cash on Delivery (COD)</strong>
+            </label>
           </div>
-          <div id="paypalBtnWrap"></div>
+
+          <div id="pay-paypal" class="pay-method-block">
+            <div class="paypal-info">
+              <p>Complete your purchase securely via PayPal.</p>
+              <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_111x69.jpg"
+                alt="PayPal" style="height:36px;border-radius:4px;margin-top:.5rem" />
+            </div>
+            <div id="paypalBtnWrap"></div>
+          </div>
+
+          <div id="pay-upi" class="pay-method-block" style="display:none; padding: 1rem; background: var(--bg-alt, #f9f9f9); border: 1px solid var(--border, #ddd); border-radius: 6px;">
+            <div class="form-group"><label>Enter UPI ID</label>
+              <input type="text" id="upi_id" placeholder="username@upi" /></div>
+            <button class="btn-primary" style="width:100%" onclick="processManualOrder('UPI')">Pay ${fmtMoney(total)} via UPI</button>
+          </div>
+
+          <div id="pay-cod" class="pay-method-block" style="display:none; padding: 1rem; background: var(--bg-alt, #f9f9f9); border: 1px solid var(--border, #ddd); border-radius: 6px;">
+            <p style="margin-bottom: 1rem;">You will pay <strong>${fmtMoney(total)}</strong> in cash to the delivery agent.</p>
+            <button class="btn-primary" style="width:100%" onclick="processManualOrder('COD')">Place Order (COD)</button>
+          </div>
+
           <p class="secure-note" style="margin-top:.75rem">🔒 Your payment info is never stored on our servers.</p>
           <button class="btn-back" onclick="backToShipping()">← Back to Shipping</button>
         </div>
@@ -653,6 +683,32 @@ function backToShipping() {
   document.getElementById('shippingForm').style.display  = '';
   document.getElementById('paymentSection').style.display = 'none';
   document.getElementById('paypalBtnWrap').innerHTML = '';
+}
+
+function switchPayMethod(method) {
+  document.getElementById('pay-paypal').style.display = method === 'paypal' ? '' : 'none';
+  document.getElementById('pay-upi').style.display = method === 'upi' ? '' : 'none';
+  document.getElementById('pay-cod').style.display = method === 'cod' ? '' : 'none';
+}
+
+async function processManualOrder(method) {
+  if (method === 'UPI') {
+    const upi = document.getElementById('upi_id').value.trim();
+    if (!upi || !upi.includes('@')) { showToast('Please enter a valid UPI ID.', 'error'); return; }
+  }
+  
+  const btn = event.currentTarget;
+  btn.disabled = true; 
+  btn.textContent = 'Processing...';
+
+  // NOTE: Simulating API delay here for the frontend UI.
+  // In production, this should POST to a generic '/api/orders' backend route to save the order.
+  await new Promise(r => setTimeout(r, 1500));
+  
+  await api('DELETE', '/api/cart');
+  state.cartCount = 0; updateCartBadge();
+  showToast('Order placed successfully!', 'success');
+  navigate('success', { orderId: method + '-' + Math.floor(100000 + Math.random() * 900000) });
 }
 
 // ── PayPal ────────────────────────────────────────────────
