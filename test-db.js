@@ -9,6 +9,7 @@ async function testConnection() {
       user: process.env.DB_USER || 'root',
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_NAME || 'bookmart',
+      port: process.env.DB_PORT || 3306,
     }).promise();
 
     const [rows] = await pool.query('SHOW TABLES');

@@ -71,9 +71,11 @@ If you already have MySQL running, you can skip this step. If you are on a Mac, 
    PORT=3000
    DB_HOST=localhost
    DB_USER=root
+   DB_PORT=3306
    DB_PASSWORD=
    DB_NAME=bookmart
-   SESSION_SECRET=your_super_secret_key
+   SESSION_SECRET=1f8a7d1d57215cc491abc35642354ecdec59fc2dcd00f67bffef03bc39c891cf
+   PAYPAL_CLIENT_ID=your_paypal_client_id_here
    ```
    *(Update `DB_PASSWORD` if your MySQL root user has a password set).*
 
