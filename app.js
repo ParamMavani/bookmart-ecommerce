@@ -672,7 +672,7 @@ function goToPayment() {
   const zip  = document.getElementById('s_zip')?.value?.trim();
   const country = document.getElementById('s_country')?.value;
   if (!name||!email||!addr||!city||!zip) { showToast('Please fill in all shipping fields.', 'error'); return; }
-  state.checkout.shipping = { name, email, address: addr, city, zip, country };
+  state.checkout.shipping = { name, email, address: addr, city, zip, country, state: '' };
   document.getElementById('shippingForm').style.display  = 'none';
   document.getElementById('paymentSection').style.display = '';
   document.getElementById('step2lbl').classList.add('active');
@@ -715,6 +715,7 @@ async function processManualOrder(method) {
 function mountPayPal() {
   const wrap = document.getElementById('paypalBtnWrap');
   if (!wrap) return;
+  wrap.innerHTML = '';
 
   if (typeof paypal === 'undefined') {
     wrap.innerHTML = `
