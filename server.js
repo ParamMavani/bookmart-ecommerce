@@ -17,13 +17,13 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc:  ["'self'", "'unsafe-inline'", "https://www.paypal.com", "https://www.paypalobjects.com", "https://js.braintreegateway.com", "https://www.sandbox.paypal.com"],
+      scriptSrc:  ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://*.paypal.com", "https://*.sandbox.paypal.com", "https://*.paypalobjects.com", "https://js.braintreegateway.com"],
       scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc:   ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       fontSrc:    ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
       imgSrc:     ["'self'", "data:", "https:", "http:"],
-      frameSrc:   ["https://www.paypal.com", "https://www.sandbox.paypal.com"],
-      connectSrc: ["'self'", "https://www.paypal.com", "https://www.sandbox.paypal.com", "https://api.sandbox.paypal.com"],
+      frameSrc:   ["'self'", "https://*.paypal.com", "https://*.sandbox.paypal.com"],
+      connectSrc: ["'self'", "https://*.paypal.com", "https://*.sandbox.paypal.com", "https://*.paypalobjects.com"],
     }
   }
 }));

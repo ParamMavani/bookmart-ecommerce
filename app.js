@@ -716,6 +716,8 @@ function mountPayPal() {
   const wrap = document.getElementById('paypalBtnWrap');
   if (!wrap) return;
   wrap.innerHTML = '';
+  wrap.style.opacity = '1';
+  wrap.style.pointerEvents = 'auto';
 
   if (typeof paypal === 'undefined') {
     wrap.innerHTML = `
@@ -738,7 +740,9 @@ function mountPayPal() {
     },
     onApprove: async (data, actions) => {
       try {
-        wrap.innerHTML = '<div class="paypal-processing"><div class="spinner"></div><p>Authorizing Payment…</p></div>';
+        showToast('Authorizing Payment…', 'info');
+        wrap.style.opacity = '0.5';
+        wrap.style.pointerEvents = 'none';
         const captureResult = await actions.order.capture();
         
         const res = await api('POST', '/api/orders/capture-paypal-order',
