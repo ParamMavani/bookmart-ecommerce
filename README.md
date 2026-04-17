@@ -1,6 +1,6 @@
 # 📚 BookMart E-Commerce SPA
 
-A lightweight, full-stack E-Commerce application built with a vanilla JavaScript Single Page Application (SPA) frontend, a Node.js/Express backend, and a MySQL database. Features include user authentication, a shopping cart, PayPal sandbox checkout, and a complete Admin Dashboard.
+A lightweight, full-stack E-Commerce application built with a vanilla JavaScript Single Page Application (SPA) frontend, a Node.js/Express backend, and a MySQL database. Features include user authentication, a shopping cart, PayPal/UPI/COD checkout, a dark/light mode theme toggle, user profile settings, and a complete Admin Dashboard.
 
 ---
 
@@ -31,6 +31,7 @@ Before you begin, ensure you have the following installed on your machine:
 ├── index.html              # Main HTML frontend entry point
 ├── server.js               # Express backend server entry point
 ├── database.sql            # Initial MySQL database schema setup
+├── migrate-db.js           # Database migration script for schema updates
 ├── seed-dummy-data.js      # Script to populate database with demo data
 ├── seed-products.sql       # Alternate script to just insert books
 ├── test-db.js              # Utility script to test MySQL connection
@@ -76,6 +77,7 @@ If you already have MySQL running, you can skip this step. If you are on a Mac, 
    DB_NAME=bookmart
    SESSION_SECRET=1f8a7d1d57215cc491abc35642354ecdec59fc2dcd00f67bffef03bc39c891cf
    PAYPAL_CLIENT_ID=AQ8bqirFCmcaEk9Uoxe5yoSt68gCv884qorLLVxR3cO_fll2suwNEAWTD9Ho-VapUgEIhhd6S0Wy6LHA
+   PAYPAL_CLIENT_SECRET=your_paypal_secret_here
    ```
    *(Update `DB_PASSWORD` if your MySQL root user has a password set).*
 
@@ -138,5 +140,6 @@ If you ran the `seed-dummy-data.js` script, you can test the app using these pre
 
 Included in this repository are a few utility scripts to help if you get stuck:
 * **`test-db.js`**: Checks if your `.env` database credentials are correct and prints out your tables.
+* **`migrate-db.js`**: Safely applies schema updates (like adding new columns) to an existing database without losing data.
 * **`reset-password.js`**: If you ever get locked out of the Admin account or the initial SQL seed hash doesn't work, run `node reset-password.js` to force-reset the admin password back to `Admin@1234`.
 * **`seed-products.sql`**: An alternate raw SQL script to inject just a few basic books without touching users or orders.
