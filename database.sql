@@ -7,6 +7,12 @@ CREATE TABLE users (
   email VARCHAR(100) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
   role ENUM('customer', 'admin') DEFAULT 'customer',
+  is_active BOOLEAN DEFAULT TRUE,
+  address VARCHAR(255),
+  city VARCHAR(100),
+  state VARCHAR(100),
+  zip VARCHAR(20),
+  country VARCHAR(50),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

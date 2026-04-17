@@ -182,6 +182,14 @@ button { cursor: pointer; font-family: var(--font-sans); }
 }
 .btn-primary:hover { background: var(--amber-lt); }
 .btn-primary:active { transform: scale(.98); }
+.btn-danger {
+  padding: .9rem;
+  background: #fee; color: var(--rust);
+  border: 1.5px solid var(--rust); border-radius: var(--r-lg);
+  font-weight: 700; font-size: 1rem;
+  transition: background .2s, color .2s, transform .1s;
+}
+.btn-danger:hover { background: var(--rust); color: #fff; }
 .auth-switch {
   text-align: center; margin-top: 1.2rem;
   font-size: .9rem; color: var(--muted);
@@ -444,6 +452,7 @@ button { cursor: pointer; font-family: var(--font-sans); }
 .status-paid       { background: #d4edda; color: #155724; }
 .status-pending    { background: #fff3cd; color: #856404; }
 .status-cancelled  { background: #f8d7da; color: #721c24; }
+.status-refunded   { background: #d1ecf1; color: #0c5460; }
 .order-items-preview { display: flex; gap: .5rem; flex-wrap: wrap; }
 .order-item-thumb {
   width: 48px; height: 64px; object-fit: cover;
@@ -543,6 +552,8 @@ button { cursor: pointer; font-family: var(--font-sans); }
 @media (max-width: 768px) {
   .cart-wrap { flex-direction: column; }
   .cart-summary-col { width: 100%; }
+  .settings-layout { flex-direction: column; }
+  .settings-nav { width: 100%; flex-direction: row; overflow-x: auto; }
   .detail-grid { flex-direction: column; }
   .detail-img { width: 140px; }
   .nav-search { display: none; }
@@ -861,6 +872,58 @@ button { cursor: pointer; font-family: var(--font-sans); }
 .role-admin { background: #fde; color: #8b0054; }
 .role-user  { background: #e8f4f8; color: #0c5460; }
 
+/* ─── Settings Page ───────────────────────────────────── */
+.settings-wrap {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 0 2rem;
+}
+.settings-layout {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  margin-top: 1.5rem;
+}
+.settings-nav {
+  width: 220px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+}
+.settings-nav-item {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .8rem 1rem;
+  border-radius: var(--r-lg);
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--muted);
+  transition: background .2s, color .2s;
+  border: 1px solid transparent;
+}
+.settings-nav-item i {
+  width: 20px;
+  text-align: center;
+  font-size: 1rem;
+}
+.settings-nav-item:hover {
+  background: var(--cream);
+  color: var(--ink);
+  text-decoration: none;
+}
+.settings-nav-item.active {
+  background: #fff;
+  color: var(--ink);
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.settings-content {
+  flex: 1;
+  min-width: 0;
+}
+
 @media (max-width: 1024px) {
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .admin-two-col { grid-template-columns: 1fr; }
@@ -873,3 +936,91 @@ button { cursor: pointer; font-family: var(--font-sans); }
   .hero-stats { gap: 1.5rem; }
   .hero-stat strong { font-size: 1.4rem; }
 }
+
+/* ─── Dark Mode Overrides ─────────────────────────────── */
+body.dark-theme {
+  --ink:        #faf7f2;
+  --paper:      #12100e;
+  --cream:      #1e1b17;
+  --amber:      #e8a93e;
+  --amber-lt:   #f0c775;
+  --amber-dk:   #c8882a;
+  --sage:       #6e9661;
+  --rust:       #d96947;
+  --muted:      #9d9385;
+  --border:     rgba(255,255,255,.12);
+  --shadow-sm:  0 2px 8px rgba(0,0,0,.3);
+  --shadow-md:  0 8px 32px rgba(0,0,0,.4);
+  --shadow-lg:  0 24px 64px rgba(0,0,0,.5);
+}
+
+/* Structural backgrounds that stay dark */
+body.dark-theme .navbar,
+body.dark-theme .hero,
+body.dark-theme .promo-banner,
+body.dark-theme .site-footer {
+  background: #0a0806;
+}
+body.dark-theme .brand-name,
+body.dark-theme .nav-btn,
+body.dark-theme .hero h1,
+body.dark-theme .hero-stat strong,
+body.dark-theme .promo-text h3,
+body.dark-theme .footer-links h4,
+body.dark-theme .footer-info h4 {
+  color: #faf7f2;
+}
+body.dark-theme .hero p,
+body.dark-theme .btn-hero-outline,
+body.dark-theme .promo-text p,
+body.dark-theme .footer-links a,
+body.dark-theme .footer-info p,
+body.dark-theme .footer-brand p {
+  color: rgba(250,247,242,.7);
+}
+body.dark-theme .btn-hero-outline { border-color: rgba(255,255,255,.25); }
+body.dark-theme .nav-search input {
+  color: #faf7f2; background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.12);
+}
+body.dark-theme .toast {
+  background: #1a1714; color: var(--ink); border: 1px solid var(--border);
+}
+
+body.dark-theme .user-dropdown, body.dark-theme .modal-box,
+body.dark-theme .sidebar-card, body.dark-theme .sort-select,
+body.dark-theme .product-card, body.dark-theme .page-btn,
+body.dark-theme .cart-item, body.dark-theme .qty-btn,
+body.dark-theme .cart-summary-card, body.dark-theme .order-card,
+body.dark-theme .shop-search-bar input, body.dark-theme .btn-detail-wish,
+body.dark-theme .checkout-card, body.dark-theme .admin-tab,
+body.dark-theme .stat-card, body.dark-theme .admin-card,
+body.dark-theme .settings-nav-item.active, body.dark-theme .cat-pill {
+  background: #1a1714;
+  color: var(--ink);
+}
+
+body.dark-theme input, body.dark-theme textarea, body.dark-theme select {
+  color: var(--ink);
+}
+
+body.dark-theme .wish-btn:hover, body.dark-theme .wish-btn.active {
+  background: #1a1714;
+}
+
+/* Orders / Badges */
+body.dark-theme .status-paid { background: rgba(110, 150, 97, 0.2); color: #8fbc8f; }
+body.dark-theme .status-pending { background: rgba(200, 136, 42, 0.2); color: var(--amber-lt); }
+body.dark-theme .status-cancelled { background: rgba(217, 105, 71, 0.2); color: #ff9999; }
+body.dark-theme .status-refunded { background: rgba(157, 147, 133, 0.2); color: var(--muted); }
+
+/* Admin & Component Adjustments */
+body.dark-theme .admin-table td { border-bottom-color: var(--border); }
+body.dark-theme .btn-tbl-edit { background: rgba(255,255,255,.1); color: var(--ink); }
+body.dark-theme .btn-tbl-edit:hover { background: var(--amber); color: #12100e; }
+body.dark-theme .btn-tbl-del { background: rgba(217, 105, 71, 0.15); color: #ff9999; }
+body.dark-theme .btn-tbl-del:hover { background: var(--rust); color: var(--ink); }
+body.dark-theme .auth-demo code, body.dark-theme .paypal-missing code { background: rgba(255,255,255,.1); }
+body.dark-theme .paypal-info { background: #1a1714; border: 1px solid var(--border); color: var(--ink); }
+
+body.dark-theme .btn-danger { background: rgba(217, 105, 71, 0.1); color: #ff9999; border-color: #ff9999; }
+body.dark-theme .btn-danger:hover { background: var(--rust); color: var(--ink); border-color: var(--rust); }

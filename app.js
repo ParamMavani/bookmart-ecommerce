@@ -63,7 +63,7 @@ function navigate(page, params = {}) {
 function renderView(page, params = {}) {
   const map = { home: renderHome, shop: renderShop, cart: renderCart,
     checkout: renderCheckout, orders: renderOrders, wishlist: renderWishlist,
-    admin: renderAdmin, success: () => renderSuccess(params.orderId) };
+    admin: renderAdmin, settings: renderSettings, success: () => renderSuccess(params.orderId) };
   (map[page] || renderHome)();
 }
 
@@ -153,9 +153,18 @@ async function submitAuth(e, mode) {
   const body = { email: document.getElementById('authEmail').value,
                  password: document.getElementById('authPass').value };
   if (mode === 'register') body.name = document.getElementById('authName').value;
-  const { ok, data } = await api('POST', `/api/auth/${mode}`, body);
-  if (ok) { forceCloseModal(); await checkAuth(); showToast(data.message, 'success'); }
-  else {
+  const { ok, status, data } = await api('POST', `/api/auth/${mode}`, body);
+  
+  if (ok) { 
+    forceCloseModal(); await checkAuth(); showToast(data.message, 'success'); 
+  } else if (status === 403) {
+    btn.disabled = false; btn.textContent = mode === 'login' ? '→ Sign In' : '→ Create Account';
+    if (confirm('Your account is currently deactivated. Would you like to reactivate it and log in?')) {
+      const reactRes = await api('POST', '/api/auth/reactivate', body);
+      if (reactRes.ok) { forceCloseModal(); await checkAuth(); showToast(reactRes.data.message, 'success'); }
+      else { showToast(reactRes.data.message || 'Failed to reactivate.', 'error'); }
+    }
+  } else {
     const msg = data.errors ? data.errors.map(x=>x.msg).join(', ') : (data.message||'Failed.');
     showToast(msg, 'error');
     btn.disabled = false;
@@ -163,7 +172,22 @@ async function submitAuth(e, mode) {
   }
 }
 
-async function logout() {
+function logout() {
+  openModal(`
+    <button class="modal-close" onclick="forceCloseModal()">✕</button>
+    <div style="text-align:center; padding: 1rem 0;">
+      <h2 style="font-family:var(--font-serif); font-size:1.8rem; margin-bottom:0.75rem">Sign Out</h2>
+      <p style="color:var(--muted); margin-bottom:2rem; font-size:1.05rem;">Are you sure you want to sign out?</p>
+      <div style="display:flex; gap:1rem; justify-content:center">
+        <button class="btn-primary" style="width:auto; padding:0.8rem 2.5rem; background:var(--cream); color:var(--ink)" onclick="forceCloseModal()">No</button>
+        <button class="btn-primary" style="width:auto; padding:0.8rem 2.5rem" onclick="performLogout()">Yes</button>
+      </div>
+    </div>
+  `);
+}
+
+async function performLogout() {
+  forceCloseModal();
   await api('POST', '/api/auth/logout');
   state.user = null; state.cartCount = 0;
   refreshNavUI(); setBadge('cartBadge', 0);
@@ -825,7 +849,7 @@ async function renderOrders() {
                 <div class="order-date">${fmtDate(o.created_at)}</div>
               </div>
               <div style="text-align:right">
-                <span class="status-badge" style="background:${statusBg[o.status]||'#eee'};color:${statusFg[o.status]||'#333'}">
+                <span class="status-badge status-${o.status}">
                   ${o.status.toUpperCase()}</span>
                 <div class="order-total">${fmtMoney(o.total)}</div>
               </div>
@@ -859,6 +883,180 @@ async function renderWishlist() {
       <h2 class="section-title">My Wishlist <span style="font-size:1rem;color:var(--muted)">(${products.length})</span></h2>
       <div class="product-grid">${products.map(productCard).join('')}</div>
     </div>`;
+}
+
+// ── SETTINGS ──────────────────────────────────────────────
+async function renderSettings() {
+  if (!state.user) { openAuthModal('login'); return; }
+
+  document.getElementById('appRoot').innerHTML = `
+    <div class="settings-wrap">
+        <h2 class="section-title">Settings</h2>
+        <div class="settings-layout">
+            <aside class="settings-nav">
+                <a href="#" class="settings-nav-item active" onclick="switchSettingsTab('account', this)">
+                    <i class="fas fa-user-circle"></i> Account
+                </a>
+                <a href="#" class="settings-nav-item" onclick="switchSettingsTab('appearance', this)">
+                    <i class="fas fa-paint-brush"></i> Appearance
+                </a>
+                <a href="#" class="settings-nav-item" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </aside>
+            <main class="settings-content" id="settingsContent">
+                <div class="spinner-wrap"><div class="spinner"></div></div>
+            </main>
+        </div>
+    </div>
+  `;
+  switchSettingsTab('account'); // Load the default tab
+}
+
+function switchSettingsTab(tab, el) {
+  if (el) {
+    document.querySelectorAll('.settings-nav-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  const container = document.getElementById('settingsContent');
+  if (!container) return;
+
+  if (tab === 'account')    renderSettingsAccount(container);
+  if (tab === 'appearance') renderSettingsAppearance(container);
+}
+
+async function renderSettingsAccount(container) {
+  container.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
+  const { ok, data } = await api('GET', '/api/user/profile');
+  if (!ok) {
+    container.innerHTML = `<div class="checkout-card" style="margin:0;"><p>Failed to load profile data.</p></div>`;
+    showToast('Failed to load profile.', 'error');
+    return;
+  }
+  const u = data.user || {};
+
+  container.innerHTML = `
+    <div class="checkout-card" style="margin:0;">
+      <h3 class="checkout-card-title">👤 Edit Profile & Shipping Address</h3>
+      <form id="settingsForm" onsubmit="saveSettings(event)">
+        <div class="form-group"><label>Full Name</label>
+          <input type="text" id="set_name" value="${escHtml(u.name)}" required /></div>
+        <div class="form-group"><label>Email</label>
+          <input type="email" id="set_email" value="${escHtml(u.email)}" required /></div>
+        <div class="form-group"><label>New Password (leave blank to keep current)</label>
+          <input type="password" id="set_pass" placeholder="••••••••" /></div>
+        
+        <h4 style="margin: 1.5rem 0 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">Default Shipping Address</h4>
+        <div class="form-group"><label>Street Address</label>
+          <input type="text" id="set_addr" value="${escHtml(u.address||'')}" placeholder="123 Main St" /></div>
+        <div class="form-row-3">
+          <div class="form-group"><label>City</label>
+            <input type="text" id="set_city" value="${escHtml(u.city||'')}" placeholder="New York" /></div>
+          <div class="form-group"><label>State</label>
+            <input type="text" id="set_state" value="${escHtml(u.state||'')}" placeholder="NY" /></div>
+          <div class="form-group"><label>ZIP</label>
+            <input type="text" id="set_zip" value="${escHtml(u.zip||'')}" placeholder="10001" /></div>
+        </div>
+        <div class="form-group"><label>Country</label>
+          <select id="set_country" class="sort-select" style="width:100%">
+            <option value="US" ${u.country==='US'?'selected':''}>🇺🇸 United States</option>
+            <option value="IN" ${u.country==='IN'?'selected':''}>🇮🇳 India</option>
+            <option value="GB" ${u.country==='GB'?'selected':''}>🇬🇧 United Kingdom</option>
+            <option value="CA" ${u.country==='CA'?'selected':''}>🇨🇦 Canada</option>
+            <option value="AU" ${u.country==='AU'?'selected':''}>🇦🇺 Australia</option>
+            <option value="DE" ${u.country==='DE'?'selected':''}>🇩🇪 Germany</option>
+          </select>
+        </div>
+        <button class="btn-primary" type="submit" style="width:100%; margin-top: 1rem;">Save Changes</button>
+      </form>
+      <div style="margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+        <h4 style="color: var(--rust); margin-bottom: 0.5rem;">Danger Zone</h4>
+        <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 1rem;">Deactivating your account will hide your profile and prevent you from logging in. This requires your password.</p>
+        <div class="form-group">
+          <input type="password" id="del_pass" placeholder="Enter your password to confirm" />
+        </div>
+        <button class="btn-danger" style="width: 100%;" onclick="deleteAccount(event)">Deactivate My Account</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderSettingsAppearance(container) {
+  const currentTheme = localStorage.getItem('bm_theme') || 'system';
+  container.innerHTML = `
+    <div class="checkout-card" style="margin:0;">
+      <h3 class="checkout-card-title">🎨 Appearance</h3>
+      <div class="form-group">
+          <label style="margin-bottom: 1rem; display:block;">Theme Preference</label>
+          <div style="display:flex; flex-direction:column; gap:0.8rem; margin-top: 0.5rem;">
+            <label style="display:flex; align-items:center; gap:1rem; cursor:pointer; padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: var(--r-lg);">
+              <input type="radio" name="themeToggle" value="light" ${currentTheme === 'light' ? 'checked' : ''} onchange="setTheme('light')" style="width:1.1rem; height:1.1rem; margin:0;">
+              <span style="font-weight:600; font-size: 0.95rem;">☀️ Light Mode</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:1rem; cursor:pointer; padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: var(--r-lg);">
+              <input type="radio" name="themeToggle" value="dark" ${currentTheme === 'dark' ? 'checked' : ''} onchange="setTheme('dark')" style="width:1.1rem; height:1.1rem; margin:0;">
+              <span style="font-weight:600; font-size: 0.95rem;">🌙 Dark Mode</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:1rem; cursor:pointer; padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: var(--r-lg);">
+              <input type="radio" name="themeToggle" value="system" ${currentTheme === 'system' ? 'checked' : ''} onchange="setTheme('system')" style="width:1.1rem; height:1.1rem; margin:0;">
+              <span style="font-weight:600; font-size: 0.95rem;">💻 System Default</span>
+            </label>
+          </div>
+      </div>
+    </div>
+  `;
+}
+
+function setTheme(theme) {
+  localStorage.setItem('bm_theme', theme);
+  applyTheme();
+}
+
+function applyTheme() {
+  const theme = localStorage.getItem('bm_theme') || 'system';
+  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  if (isDark) document.body.classList.add('dark-theme');
+  else document.body.classList.remove('dark-theme');
+}
+
+async function deleteAccount(e) {
+  const passInput = document.getElementById('del_pass');
+  const password = passInput ? passInput.value : '';
+  if (!password) { showToast('Please enter your password to confirm.', 'error'); return; }
+
+  if (!confirm('Are you sure you want to deactivate your account?')) return;
+  
+  const btn = e.currentTarget;
+  btn.disabled = true; btn.textContent = 'Deactivating...';
+
+  const { ok, data } = await api('DELETE', '/api/user/profile', { password });
+  if (ok) {
+    state.user = null;
+    state.cartCount = 0;
+    refreshNavUI(); setBadge('cartBadge', 0);
+    showToast('Account deactivated successfully.', 'info');
+    navigate('home');
+  } else {
+    showToast(data.message || 'Failed to delete account.', 'error');
+    btn.disabled = false; btn.textContent = 'Deactivate My Account';
+  }
+}
+
+async function saveSettings(e) {
+  e.preventDefault();
+  const body = {
+    name: document.getElementById('set_name').value, email: document.getElementById('set_email').value,
+    password: document.getElementById('set_pass').value, address: document.getElementById('set_addr').value,
+    city: document.getElementById('set_city').value, state: document.getElementById('set_state').value,
+    zip: document.getElementById('set_zip').value, country: document.getElementById('set_country').value
+  };
+  const btn = e.target.querySelector('button');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  const { ok, data } = await api('PUT', '/api/user/profile', body);
+  if (ok) { showToast(data.message || 'Settings saved!', 'success'); await checkAuth(); } 
+  else { showToast(data.message || 'Failed to update.', 'error'); }
+  btn.disabled = false; btn.textContent = 'Save Changes';
 }
 
 // ── ADMIN ─────────────────────────────────────────────────
@@ -1078,11 +1276,19 @@ async function deleteProd(id) {
 
 // ── BOOT ──────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+  // Initialize theme
+  applyTheme();
+  
+  // Listen for OS theme changes
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if ((localStorage.getItem('bm_theme') || 'system') === 'system') applyTheme();
+  });
+
   await checkAuth();
 
   // Hash routing
   const hash = (window.location.hash||'#home').replace('#','').split('/')[0];
-  const validPages = ['home','shop','cart','checkout','orders','wishlist','admin'];
+  const validPages = ['home','shop','cart','checkout','orders','wishlist','admin','settings'];
   renderView(validPages.includes(hash) ? hash : 'home');
 
   // User button click

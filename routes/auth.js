@@ -21,6 +21,7 @@ router.post('/login', async (req, res) => {
     if (users.length === 0) return res.status(401).json({ success: false, message: 'Invalid credentials.' });
     
     const user = users[0];
+    if (!user.is_active) return res.status(403).json({ success: false, message: 'Account deactivated.' });
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ success: false, message: 'Invalid credentials.' });
 
@@ -30,6 +31,25 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error.' });
   }
+});
+
+router.post('/reactivate', async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+    if (users.length === 0) return res.status(401).json({ success: false, message: 'Invalid credentials.' });
+    
+    const user = users[0];
+    if (user.is_active) return res.status(400).json({ success: false, message: 'Account is already active.' });
+    
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(401).json({ success: false, message: 'Invalid credentials.' });
+
+    await db.query('UPDATE users SET is_active = TRUE WHERE id = ?', [user.id]);
+    req.session.userId = user.id;
+    req.session.role = user.role;
+    res.json({ success: true, message: `Welcome back, ${user.name}! Your account has been reactivated.` });
+  } catch (err) { res.status(500).json({ success: false, message: 'Server error.' }); }
 });
 
 router.get('/me', async (req, res) => {

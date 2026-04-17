@@ -75,6 +75,7 @@ app.use('/api/products', require('./routes/products'));
 app.use('/api/cart',     require('./routes/cart'));
 app.use('/api/orders',   require('./routes/orders'));
 app.use('/api/admin',    require('./routes/admin'));
+app.use('/api/user',     require('./routes/user'));
 
 // ── SPA Fallback ──────────────────────────────────────────
 // All non-API routes serve index.html (client-side routing)
