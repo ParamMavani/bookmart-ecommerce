@@ -622,10 +622,12 @@ async function renderCheckout() {
             <div id="paypalBtnWrap"></div>
           </div>
 
-          <div id="pay-upi" class="pay-method-block" style="display:none; padding: 1rem; background: var(--bg-alt, #f9f9f9); border: 1px solid var(--border, #ddd); border-radius: 6px;">
-            <div class="form-group"><label>Enter UPI ID</label>
+          <div id="pay-upi" class="pay-method-block" style="display:none; padding: 1rem; background: var(--bg-alt, #f9f9f9); border: 1px solid var(--border, #ddd); border-radius: 6px; text-align: center;">
+            <p style="margin-bottom: 1rem; font-size: 0.95rem;">Scan QR to pay <strong>${fmtMoney(total)}</strong></p>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`upi://pay?pa=bookmart@ybl&pn=BookMart&am=${total}&cu=INR`)}" alt="UPI QR Code" style="display: block; margin: 0 auto 1rem auto; border-radius: 8px; padding: 0.5rem; background: #fff; border: 1px solid var(--border, #ddd);" />
+            <div class="form-group" style="text-align: left;"><label>Or Enter your UPI ID</label>
               <input type="text" id="upi_id" placeholder="username@upi" /></div>
-            <button class="btn-primary" style="width:100%" onclick="processManualOrder('UPI')">Pay ${fmtMoney(total)} via UPI</button>
+            <button class="btn-primary" style="width:100%" onclick="processManualOrder('UPI')">Confirm Payment via UPI</button>
           </div>
 
           <div id="pay-cod" class="pay-method-block" style="display:none; padding: 1rem; background: var(--bg-alt, #f9f9f9); border: 1px solid var(--border, #ddd); border-radius: 6px;">
