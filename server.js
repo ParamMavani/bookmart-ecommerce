@@ -88,7 +88,7 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`\n🚀  BookMart running at http://localhost:${PORT}`);
+  console.log(`\n🚀  BookMart running at Server running on port${PORT}`);
   console.log(`📦  Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`💳  PayPal mode:  ${process.env.PAYPAL_MODE || 'sandbox'}\n`);
 });
