@@ -718,23 +718,28 @@ function switchPayMethod(method) {
 }
 
 async function processManualOrder(method) {
+  let paymentRef = '';
   if (method === 'UPI') {
-    const upi = document.getElementById('upi_id').value.trim();
-    if (!upi || !upi.includes('@')) { showToast('Please enter a valid UPI ID.', 'error'); return; }
+    paymentRef = document.getElementById('upi_id').value.trim();
+    if (!paymentRef || !paymentRef.includes('@')) { showToast('Please enter a valid UPI ID.', 'error'); return; }
   }
   
   const btn = event.currentTarget;
   btn.disabled = true; 
   btn.textContent = 'Processing...';
 
-  // NOTE: Simulating API delay here for the frontend UI.
-  // In production, this should POST to a generic '/api/orders' backend route to save the order.
-  await new Promise(r => setTimeout(r, 1500));
-  
-  await api('DELETE', '/api/cart');
-  state.cartCount = 0; updateCartBadge();
-  showToast('Order placed successfully!', 'success');
-  navigate('success', { orderId: method + '-' + Math.floor(100000 + Math.random() * 900000) });
+  const body = { method, paymentRef, shipping: state.checkout.shipping };
+  const { ok, data } = await api('POST', '/api/orders', body);
+
+  if (ok) {
+    state.cartCount = 0; updateCartBadge();
+    showToast('Order placed successfully!', 'success');
+    navigate('success', { orderId: data.orderId });
+  } else {
+    showToast(data.message || 'Failed to place order.', 'error');
+    btn.disabled = false;
+    btn.textContent = method === 'UPI' ? 'Confirm Payment via UPI' : 'Place Order (COD)';
+  }
 }
 
 // ── PayPal ────────────────────────────────────────────────
