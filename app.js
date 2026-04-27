@@ -197,6 +197,7 @@ async function performLogout() {
 // ── Wishlist ──────────────────────────────────────────────
 function toggleWishlist(e, id, title) {
   e.stopPropagation();
+  if (!state.user) { openAuthModal('login'); return; }
   const i = state.wishlist.indexOf(id);
   if (i === -1) { state.wishlist.push(id); showToast(`"${title}" saved ♥`, 'success'); }
   else          { state.wishlist.splice(i,1); showToast('Removed from wishlist','info'); }
@@ -871,6 +872,7 @@ async function renderOrders() {
 
 // ── WISHLIST ──────────────────────────────────────────────
 async function renderWishlist() {
+  if (!state.user) { openAuthModal('login'); return; }
   document.getElementById('appRoot').innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
   if (!state.wishlist.length) {
     document.getElementById('appRoot').innerHTML = `
