@@ -1115,9 +1115,26 @@ async function renderAdmin() {
 
       <div id="aTab-products" class="admin-tab-content" style="display:none">
         <div class="admin-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:1rem">
             <h4>📚 All Products</h4>
-            <button class="btn-sm-primary" onclick="openAddProd()">+ Add Product</button>
+            <div style="flex:1;max-width:300px">
+              <input type="text" id="adminProdSearch" placeholder="Search titles, authors..." style="width:100%;padding:.5rem .8rem;border:1.5px solid var(--border);border-radius:40px;font-size:.85rem" oninput="debounceAdminSearch('products')" />
+            </div>
+            <div style="display:flex; align-items:center;">
+              <div class="user-menu">
+                <button class="btn-sm-outline">⇆ Import / Export</button>
+                <div class="user-dropdown" style="right:0; min-width:160px; z-index:100; text-align:left;">
+                  <a href="#" onclick="event.preventDefault(); document.getElementById('importCsvInput').click()">📤 Import CSV</a>
+                  <a href="#" onclick="event.preventDefault(); exportProductsCSV()">📥 Export CSV</a>
+                </div>
+              </div>
+              <input type="file" id="importCsvInput" accept=".csv" style="display:none" onchange="importProductsCSV(event)" />
+              <button class="btn-sm-primary" onclick="openAddProd()" style="margin-left:.5rem">+ Add</button>
+            </div>
+          </div>
+          <div id="adminBulkActions" style="display:none; margin-bottom: 1rem; padding: 0.75rem 1rem; background: var(--bg-alt); border-radius: var(--r-md); align-items: center; justify-content: space-between;">
+             <span id="bulkSelectCount" style="font-size: 0.9rem; font-weight: 600;"></span>
+             <button class="btn-sm-danger" onclick="bulkDeleteProducts()">Delete Selected</button>
           </div>
           <div id="adminProdsEl"><div class="spinner-wrap"><div class="spinner"></div></div></div>
         </div>
@@ -1125,14 +1142,25 @@ async function renderAdmin() {
 
       <div id="aTab-orders" class="admin-tab-content" style="display:none">
         <div class="admin-card">
-          <h4 style="margin-bottom:1.25rem">📦 All Orders</h4>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:1rem">
+            <h4>📦 All Orders</h4>
+            <div style="flex:1;max-width:300px">
+              <input type="text" id="adminOrdSearch" placeholder="Search orders, emails, names..." style="width:100%;padding:.5rem .8rem;border:1.5px solid var(--border);border-radius:40px;font-size:.85rem" oninput="debounceAdminSearch('orders')" />
+            </div>
+            <button class="btn-sm-outline" onclick="exportOrdersCSV()">📥 Export CSV</button>
+          </div>
           <div id="adminOrdEl"><div class="spinner-wrap"><div class="spinner"></div></div></div>
         </div>
       </div>
 
       <div id="aTab-users" class="admin-tab-content" style="display:none">
         <div class="admin-card">
-          <h4 style="margin-bottom:1.25rem">👥 All Customers</h4>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:1rem">
+            <h4>👥 All Customers</h4>
+            <div style="flex:1;max-width:300px">
+              <input type="text" id="adminUsrSearch" placeholder="Search name or email..." style="width:100%;padding:.5rem .8rem;border:1.5px solid var(--border);border-radius:40px;font-size:.85rem" oninput="debounceAdminSearch('users')" />
+            </div>
+          </div>
           <div id="adminUsrEl"><div class="spinner-wrap"><div class="spinner"></div></div></div>
         </div>
       </div>
@@ -1149,12 +1177,68 @@ async function adminTab(tab, btn) {
   if (tab === 'users')    await loadAdminUsrs();
 }
 
+async function importProductsCSV(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = ''; // Reset input
+
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    const text = ev.target.result;
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) { showToast('CSV must have a header and data rows.', 'error'); return; }
+    
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    if (!headers.includes('title') || !headers.includes('price')) {
+      showToast('CSV must contain at least "title" and "price" columns.', 'error'); return;
+    }
+
+    let success = 0, failed = 0;
+    showToast('Importing products...', 'info');
+
+    for (let i = 1; i < lines.length; i++) {
+      const rowText = lines[i];
+      const cols = [];
+      let cur = '', inQuotes = false;
+      for (let c = 0; c < rowText.length; c++) {
+        const char = rowText[c];
+        if (char === '"' && rowText[c+1] === '"') { cur += '"'; c++; } // escaped quotes
+        else if (char === '"') { inQuotes = !inQuotes; }
+        else if (char === ',' && !inQuotes) { cols.push(cur.trim()); cur = ''; }
+        else { cur += char; }
+      }
+      cols.push(cur.trim());
+
+      const getCol = (name) => cols[headers.indexOf(name)] || '';
+
+      const body = {
+        title: getCol('title'), author: getCol('author') || null, description: getCol('description') || null,
+        price: parseFloat(getCol('price')) || 0, stock: parseInt(getCol('stock')) || 0, image_url: getCol('image_url') || null,
+        isbn: getCol('isbn') || null, rating: parseFloat(getCol('rating')) || 4.0, category_id: parseInt(getCol('category_id')) || null
+      };
+
+      if (!body.title) continue;
+
+      const { ok } = await api('POST', '/api/admin/products', body);
+      if (ok) success++; else failed++;
+    }
+    showToast(`Import complete: ${success} added, ${failed} failed.`, success > 0 ? 'success' : 'error');
+    if (success > 0) loadAdminProds();
+  };
+  reader.readAsText(file);
+}
+
 async function loadAdminProds() {
   const { data } = await api('GET', '/api/admin/products');
   const el = document.getElementById('adminProdsEl'); if (!el) return;
+  updateBulkActionsUI(); // Hide bulk actions on reload
   el.innerHTML = `<div style="overflow-x:auto"><table class="admin-table">
-    <thead><tr><th>ID</th><th>Title</th><th>Author</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead>
+    <thead><tr>
+      <th><input type="checkbox" onchange="toggleAllProdCheck(this.checked)" title="Select all" /></th>
+      <th>ID</th><th>Title</th><th>Author</th><th>Price</th><th>Stock</th><th>Actions</th>
+    </tr></thead>
     <tbody>${(data.products||[]).map(p=>`<tr>
+      <td><input type="checkbox" class="prod-check" data-id="${p.id}" onchange="updateBulkActionsUI()" /></td>
       <td>${p.id}</td><td>${escHtml(p.title)}</td><td>${escHtml(p.author||'—')}</td>
       <td>${fmtMoney(p.price)}</td>
       <td><span ${+p.stock<5?'class="low-stock"':''}>${p.stock}</span></td>
@@ -1165,8 +1249,75 @@ async function loadAdminProds() {
     </tr>`).join('')}</tbody></table></div>`;
 }
 
+function toggleAllProdCheck(checked) {
+  document.querySelectorAll('.prod-check').forEach(c => c.checked = checked);
+  updateBulkActionsUI();
+}
+
+function updateBulkActionsUI() {
+  const selected = document.querySelectorAll('.prod-check:checked');
+  const bulkActionsEl = document.getElementById('adminBulkActions');
+  const countEl = document.getElementById('bulkSelectCount');
+  
+  if (!bulkActionsEl || !countEl) return;
+
+  if (selected.length > 0) {
+    bulkActionsEl.style.display = 'flex';
+    countEl.textContent = `${selected.length} selected`;
+  } else {
+    bulkActionsEl.style.display = 'none';
+  }
+}
+
+async function bulkDeleteProducts() {
+  const selected = Array.from(document.querySelectorAll('.prod-check:checked')).map(c => c.dataset.id);
+  if (selected.length === 0) {
+    showToast('No products selected.', 'info');
+    return;
+  }
+  if (!confirm(`Are you sure you want to delete ${selected.length} product(s)? This cannot be undone.`)) return;
+
+  const { ok, data } = await api('DELETE', '/api/admin/products', { ids: selected });
+  if (ok) {
+    showToast(data.message || 'Products deleted.', 'success');
+    loadAdminProds();
+  } else {
+    showToast(data.message || 'Failed to delete products.', 'error');
+  }
+}
+
+async function exportProductsCSV() {
+  const btn = document.querySelector('#aTab-products button[onclick="exportProductsCSV()"]');
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Exporting...'; }
+  
+  const { ok, data } = await api('GET', '/api/admin/products');
+  
+  if (btn) { btn.disabled = false; btn.innerHTML = '📥 Export'; }
+  
+  if (!ok || !data.products || data.products.length === 0) { 
+    showToast('No products to export.', 'error'); 
+    return; 
+  }
+
+  const headers = ['ID', 'Title', 'Author', 'Description', 'Price', 'Stock', 'Image URL', 'ISBN', 'Rating', 'Category ID', 'Category'];
+  const rows = data.products.map(p => [ p.id, `"${(p.title || '').replace(/"/g, '""')}"`, `"${(p.author || '').replace(/"/g, '""')}"`, `"${(p.description || '').replace(/"/g, '""')}"`, p.price, p.stock, `"${(p.image_url || '').replace(/"/g, '""')}"`, `"${(p.isbn || '').replace(/"/g, '""')}"`, p.rating, p.category_id, `"${(p.category || '').replace(/"/g, '""')}"` ]);
+
+  const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `bookmart_products_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 async function loadAdminOrds() {
-  const { data } = await api('GET', '/api/admin/orders');
+  const q = document.getElementById('adminOrdSearch')?.value || '';
+  const { data } = await api('GET', `/api/admin/orders?search=${encodeURIComponent(q)}`);
   const el = document.getElementById('adminOrdEl'); if (!el) return;
   el.innerHTML = `<div style="overflow-x:auto"><table class="admin-table">
     <thead><tr><th>ID</th><th>Customer</th><th>Total</th><th>Date</th><th>Status</th></tr></thead>
@@ -1184,8 +1335,47 @@ async function loadAdminOrds() {
     </tr>`).join('')}</tbody></table></div>`;
 }
 
+async function exportOrdersCSV() {
+  const btn = document.querySelector('#aTab-orders button');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Exporting...'; }
+  
+  const { ok, data } = await api('GET', '/api/admin/orders');
+  
+  if (btn) { btn.disabled = false; btn.textContent = '📥 Export CSV'; }
+  
+  if (!ok || !data.orders || data.orders.length === 0) { 
+    showToast('No orders to export.', 'error'); 
+    return; 
+  }
+
+  const headers = ['Order ID', 'Customer Name', 'Customer Email', 'Subtotal', 'Tax', 'Total', 'Status', 'Date'];
+  const rows = data.orders.map(o => [
+    o.id,
+    `"${(o.user_name || 'Guest').replace(/"/g, '""')}"`,
+    `"${(o.user_email || '').replace(/"/g, '""')}"`,
+    o.subtotal,
+    o.tax,
+    o.total,
+    o.status,
+    `"${new Date(o.created_at).toISOString()}"`
+  ]);
+
+  const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `bookmart_orders_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 async function loadAdminUsrs() {
-  const { data } = await api('GET', '/api/admin/users');
+  const q = document.getElementById('adminUsrSearch')?.value || '';
+  const { data } = await api('GET', `/api/admin/users?search=${encodeURIComponent(q)}`);
   const el = document.getElementById('adminUsrEl'); if (!el) return;
   el.innerHTML = `<div style="overflow-x:auto"><table class="admin-table">
     <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Joined</th></tr></thead>

@@ -34,10 +34,16 @@ router.get('/dashboard', async (req, res) => {
 // ── GET /api/admin/products ───────────────────────────────
 router.get('/products', async (req, res) => {
   try {
-    const [rows] = await db.query(`
-      SELECT p.*, c.name AS category
-      FROM products p LEFT JOIN categories c ON p.category_id = c.id
-      ORDER BY p.id DESC`);
+    const search = req.query.search || '';
+    let query = `SELECT p.*, c.name AS category FROM products p LEFT JOIN categories c ON p.category_id = c.id`;
+    let params = [];
+    if (search) {
+      query += ' WHERE p.title LIKE ? OR p.author LIKE ? OR p.isbn LIKE ?';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+    query += ' ORDER BY p.id DESC';
+    
+    const [rows] = await db.query(query, params);
     res.json({ success: true, products: rows });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to load products.' });
@@ -98,13 +104,38 @@ router.delete('/products/:id', async (req, res) => {
   }
 });
 
+// ── DELETE /api/admin/products (BULK) ─────────────────────
+router.delete('/products', [
+  body('ids').isArray({ min: 1 }).withMessage('Product IDs must be an array.'),
+  body('ids.*').isInt({ min: 1 }).withMessage('Each ID must be a valid integer.')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(422).json({ success: false, errors: errors.array() });
+
+  try {
+    const [result] = await db.query('DELETE FROM products WHERE id IN (?)', [req.body.ids]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'No matching products found to delete.' });
+    }
+    res.json({ success: true, message: `${result.affectedRows} product(s) deleted.` });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to delete products.' });
+  }
+});
+
 // ── GET /api/admin/orders ─────────────────────────────────
 router.get('/orders', async (req, res) => {
   try {
-    const [orders] = await db.query(`
-      SELECT o.*, u.name AS user_name, u.email AS user_email
-      FROM orders o LEFT JOIN users u ON o.user_id = u.id
-      ORDER BY o.created_at DESC`);
+    const search = req.query.search || '';
+    let query = `SELECT o.*, u.name AS user_name, u.email AS user_email FROM orders o LEFT JOIN users u ON o.user_id = u.id`;
+    let params = [];
+    if (search) {
+      query += ' WHERE o.id LIKE ? OR u.name LIKE ? OR u.email LIKE ? OR o.shipping_name LIKE ? OR o.shipping_email LIKE ?';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+    }
+    query += ' ORDER BY o.created_at DESC';
+    
+    const [orders] = await db.query(query, params);
     res.json({ success: true, orders });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to load orders.' });
@@ -129,8 +160,15 @@ router.patch('/orders/:id/status', [
 // ── GET /api/admin/users ──────────────────────────────────
 router.get('/users', async (req, res) => {
   try {
-    const [users] = await db.query(
-      'SELECT id, name, email, role, created_at FROM users ORDER BY created_at DESC');
+    const search = req.query.search || '';
+    let query = 'SELECT id, name, email, role, created_at FROM users';
+    let params = [];
+    if (search) {
+      query += ' WHERE name LIKE ? OR email LIKE ?';
+      params.push(`%${search}%`, `%${search}%`);
+    }
+    query += ' ORDER BY created_at DESC';
+    const [users] = await db.query(query, params);
     res.json({ success: true, users });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to load users.' });
